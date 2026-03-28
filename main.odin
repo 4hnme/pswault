@@ -80,6 +80,18 @@ vault_query :: proc(v: ^Vault, name: string) -> (Record, bool)
     return {}, false
 }
 
+vault_delete_field :: #force_inline proc(v: ^Vault, field: string) -> bool
+{
+    for f, i in v.fields {
+        if (f == field) {
+            ordered_remove(&v.records, i)
+            ordered_remove(&v.fields, i)
+            return true
+        }
+    }
+    return false
+}
+
 pp :: #force_inline proc(i: ^int) -> int {
     prev := i^
     i^ += 1
@@ -353,6 +365,19 @@ main :: proc()
         cryptor_vault_dump(&cryp, &vault, opt.vault)
 
     case .delete:
-        panic("Action.delete is not supported yet")
+        vault, err := cryptor_vault_slurp(&cryp, opt.vault)
+        if err != nil {
+            fmt.eprintfln("Could not read vault file: %v", err)
+            os.exit(1)
+        }
+        defer vault_destroy(&vault)
+        if (len(opt.overflow) == 0) {
+            fmt.eprintfln("No field names provided for deletion")
+        }
+        for field in opt.overflow {
+            ok := vault_delete_field(&vault, field)
+            if !ok do fmt.printfln("Could not delete field \"%s\" as it is missing")
+        }
+        cryptor_vault_dump(&cryp, &vault, opt.vault)
     }
 }

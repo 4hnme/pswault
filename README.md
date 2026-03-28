@@ -24,7 +24,12 @@ pswault <action> <vault_path> <key> [args...]
   ```bash
   pswault insert vault.bin mypassword "site_name" "username" "password"
   ```
+- `delete`: Removes records from the vault.
+  ```bash
+  pswault delete vault.bin mypassword "site_name"
+  ```
 - `query`: Retrieve records from the vault.
   ```bash
   pswault query vault.bin mypassword "site_name" # prints "username,password"
   ```
+> `insert`, `delete` and `query` actions can accept multiple parameters.
