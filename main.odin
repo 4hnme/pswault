@@ -131,13 +131,17 @@ cryptor_vault_dump :: proc(cryp: ^Cryptor, v: ^Vault, path: string)
     }
 
     free_all(context.temp_allocator)
-    os.write_entire_file(path, sb.buf[:])
+    err := os.write_entire_file(path, sb.buf[:])
+    if err != nil {
+        fmt.eprintfln("Could not create vault file: %v", err)
+        os.exit(1)
+    }
 }
 
 cryptor_vault_slurp :: proc(cryp: ^Cryptor, path: string) -> (Vault, os.Error)
 {
     v: Vault
-    data, err := os.read_entire_file_or_err(path)
+    data, err := os.read_entire_file(path, context.allocator)
     defer delete(data)
     if err != nil {
         return {}, err
@@ -301,7 +305,7 @@ main :: proc()
     err := flags.parse(&opt, os.args[1:], .Unix, strict = false)
     if err != nil {
         flags.print_errors(Options, err, os.args[0], .Unix)
-        flags.write_usage(os.stream_from_handle(os.stderr), Options, style = .Unix)
+        flags.write_usage(os.to_writer(os.stderr), Options, style = .Unix)
         os.exit(1)
     }
 
