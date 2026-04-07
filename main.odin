@@ -244,19 +244,21 @@ cryptor_decrypt :: proc(cryp: ^Cryptor, bytes: []u8, alloc := context.allocator)
     return string(dst[:len(bytes)])
 }
 
-// TODO: add cli flags to create / insert into / update vaults
 @(test)
 encrypt_dump_and_decrypt :: proc(t: ^testing.T)
 {
-    path :: "./vault.bin"
+    path :: "./test_vault.should_not_collide.with_anything.bin"
+    defer os.remove(path)
+    website := Record{"amogus", "1234567"}
+    github := Record{"animelover", "assword"}
     { // phase 1
         cryp: Cryptor
         key := "assword"
         cryptor_init_with_key(&cryp, key)
 
         vault := vault_create(key)
-        vault_add_field(&vault, "website", Record{"amogus", "1234567"})
-        vault_add_field(&vault, "github", Record{"animelover", "assword"})
+        vault_add_field(&vault, "website", website)
+        vault_add_field(&vault, "github", github)
         cryptor_vault_dump(&cryp, &vault, path)
         vault_destroy(&vault)
     }
@@ -267,17 +269,27 @@ encrypt_dump_and_decrypt :: proc(t: ^testing.T)
         cryptor_init_with_key(&cryp, key)
 
         new_vault, serr := cryptor_vault_slurp(&cryp, path)
-        testing.expectf(t, serr != nil, "Failed to slurp \"%s\": %v", path, serr)
+        testing.expectf(t, serr == nil, "Failed to slurp \"%s\": %v", path, serr)
 
         query := "website"
         record, qok := vault_query(&new_vault, query)
         testing.expectf(t, qok, "Failed to query record for \"%s\"", query)
-        fmt.printfln("Record for `%s` is: %v", query, record)
+        testing.expectf(t, record.name == website.name,
+                        "Mismatching username: expected \"%s\", got\"%s\"",
+                        website.name, record.name)
+        testing.expectf(t, record.pswd == website.pswd,
+                        "Mismatching pswd: expected \"%s\", got\"%s\"",
+                        website.pswd, record.pswd)
 
         query = "github"
         record, qok = vault_query(&new_vault, query)
         testing.expectf(t, qok, "Failed to query record for \"%s\"", query)
-        fmt.printfln("Record for `%s` is: %v", query, record)
+        testing.expectf(t, record.name == github.name,
+                        "Mismatching username: expected \"%s\", got\"%s\"",
+                        github.name, record.name)
+        testing.expectf(t, record.pswd == github.pswd,
+                        "Mismatching pswd: expected \"%s\", got\"%s\"",
+                        github.pswd, record.pswd)
 
         vault_destroy(&new_vault)
     }
